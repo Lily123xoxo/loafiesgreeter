@@ -4,15 +4,6 @@ import QtQuick.Layouts 1.15
 import Qt5Compat.GraphicalEffects 1.0
 
 // SDDM requires explicit versioning for imports
-/* TODO:
-        Attribution for SVG loafing cat: <a href="https://www.vecteezy.com/free-vector/cat-loaf">Cat Loaf Vectors by Vecteezy</a>
-        Source icons for lock/logout/sleep/shutdown/restart/enter. All should be same style/pack, check:
-            - Lucide
-            - Phosphor
-            - Tabler
-            - Feather
-
-*/
 
 Rectangle {
     id: root
