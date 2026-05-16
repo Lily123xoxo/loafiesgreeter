@@ -1,0 +1,10 @@
+[SddmGreeterTheme]
+Name=loafiesgreeter
+Description=Greeter for the loafies theme written in QML by Lily123xoxo. Icons are from Lucide.
+Author=Lily123xoxo
+Version=0.01
+Website=https://github.com/Lily123xoxo
+Screenshot=preview.png
+MainScript=Main.qml
+ConfigFile=theme.conf
+TranslationsDirectory=translations
