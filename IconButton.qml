@@ -16,11 +16,15 @@ Rectangle {
     border.width: root.borderWidth
     border.color: "transparent"
     color: "transparent"
+    activeFocusOnTab: true
+
+    Keys.onReturnPressed: clicked()
+    Keys.onSpacePressed: clicked()
 
     property real _iconDisplaySize: root.iconSize
 
     states: State {
-        name: "hovered"; when: mouseArea.containsMouse
+        name: "hovered"; when: mouseArea.containsMouse || btnRoot.activeFocus
         PropertyChanges { target: btnRoot; border.color: root.buttonHoverColor; _iconDisplaySize: root.iconSize * root.iconHoverScale }
     }
 

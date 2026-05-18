@@ -6,9 +6,21 @@ import QtGraphicalEffects 1.0
 
 // SDDM defaults to Qt5 which requires explicit versioning for imports
 
+/* TODO:
+ * - Add nums lock preview + warning when on. Grab icon from Lucide.
+ * - Wire theme config to greater loafies qml theme. If QML theme updated:
+ *      - matugen generates theme from new wallpaper via loafies theme -> trigger/hook to update sddm for to same themed matugens for next login.
+ *      - theme.conf keys [at this time]: backgroundColor, borderColor, accentColor, buttonHoverColor
+ *      - some trigger or hook needs to know to update the keys in theme.conf and with the correct mappings (will require testing to find good fits)
+ *      - read via config.<key> instead of hardcoded hex values
+*/
+
 Rectangle {
     id: root
-    
+    width: Screen.width
+    height: Screen.height
+    color: backgroundColor
+
     property color backgroundColor: "#191011"
     property color borderColor: '#86695b'
     property int borderWidth: 2
@@ -25,9 +37,17 @@ Rectangle {
 
     ListModel { id: errorLog }
 
-    width: Screen.width
-    height: Screen.height
-    color: backgroundColor
+    property var errorMessages: [
+        "segfault (core dumped)",
+        "error: auth returned nullptr",
+        "fatal: password mismatch at 0xDEADBEEF",
+        "panic: invalid credentials",
+        "403 forbidden",
+        "err: stack overflow in auth.c:42",
+        "SIGTERM: credential process killed",
+        "throw new Error('wrong password')",
+        "exit code 1: permission denied"
+    ]
 
     Image {
         id: loafFrame
@@ -110,6 +130,8 @@ Rectangle {
 
                 text: userModel.data(userModel.index(0, 0), Qt.UserRole + 1)
                 Keys.onReturnPressed: passwordField.forceActiveFocus()
+                KeyNavigation.tab: passwordField
+                KeyNavigation.backtab: sleepBtn
 
                 font.pixelSize: 20
                 color: activeFocus ? accentColor : "#FFFFFF"
@@ -161,6 +183,8 @@ Rectangle {
 
                 echoMode: TextInput.Password
                 Keys.onReturnPressed: login()
+                KeyNavigation.tab: loginBtn
+                KeyNavigation.backtab: usernameField
 
                 font.pixelSize: 20
                 color: activeFocus ? accentColor : "#FFFFFF"
@@ -202,8 +226,8 @@ Rectangle {
 
             Column {
                 id: consoleContent
-                anchors.bottom: consoleDivider.top
-                anchors.bottomMargin: fieldPadding
+                anchors.top: userSelector.bottom
+                anchors.topMargin: 8
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: fieldPadding
@@ -211,7 +235,7 @@ Rectangle {
                 spacing: 8
 
                 Text {
-                    text: "> @" + (sddm.hostName || "unknown")
+                    text: "> @" + (sddm.hostName ? sddm.hostName : "unknown")
                     color: "#ffffff"
                     font.pixelSize: 15
                 }
@@ -231,7 +255,7 @@ Rectangle {
                 }
             }
 
-            ComboBox {
+            SelectorComboBox {
                 id: sessionSelector
                 anchors.top: parent.top
                 anchors.topMargin: fieldPadding
@@ -239,80 +263,42 @@ Rectangle {
                 anchors.right: parent.right
                 anchors.leftMargin: fieldPadding
                 anchors.rightMargin: fieldPadding
-                height: 40
                 model: sessionModel
                 textRole: "name"
+                KeyNavigation.tab: userSelector
+                KeyNavigation.backtab: loginBtn
+            }
 
-                    contentItem: Item {
-                        Text {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "> " + sessionSelector.displayText
-                            color: (sessionSelector.activeFocus || sessionSelector.hovered) ? accentColor : "#ffffff"
-                            font.pixelSize: 15
+            SelectorComboBox {
+                id: userSelector
+                anchors.top: sessionSelector.bottom
+                anchors.topMargin: 8
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: fieldPadding
+                anchors.rightMargin: fieldPadding
+                model: userModel
+                textRole: "name"
+                KeyNavigation.tab: shutdownBtn
+                KeyNavigation.backtab: sessionSelector
 
-                            Behavior on color { ColorAnimation { duration: 200 } }
-                        }
-                        Image {
-                            anchors.right: parent.right
-                            anchors.rightMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            source: "assets/lucide/chevron-down.svg"
-                            width: 16
-                            height: 16
-                            sourceSize: Qt.size(16, 16)
-                            fillMode: Image.PreserveAspectFit
-                        }
-                    }
-
-                    background: Rectangle {
-                        color: "transparent"
-                        border.width: borderWidth
-                        border.color: sessionSelector.activeFocus ? accentColor : borderColor
-                        radius: 10
-
-                        Behavior on border.color { ColorAnimation { duration: 200 } }
-                    }
-
-                    indicator: null
-
-                    popup: Popup {
-                        y: sessionSelector.height
-                        width: sessionSelector.width
-                        padding: 4
-
-                        background: Rectangle {
-                            color: backgroundColor
-                            border.width: borderWidth
-                            border.color: borderColor
-                            radius: 10
-                        }
-
-                        contentItem: ListView {
-                            implicitHeight: contentHeight
-                            model: sessionSelector.popup.visible ? sessionSelector.delegateModel : null
-                            clip: true
-                        }
-                    }
-
-                    delegate: ItemDelegate {
-                        width: sessionSelector.width
-                        highlighted: sessionSelector.highlightedIndex === index
-                        contentItem: Text {
-                            text: "> " + model.name
-                            color: (hovered || highlighted) ? buttonHoverColor : "#ffffff"
-                            font.pixelSize: 15
-                        }
-                        background: Rectangle {
-                            color: "transparent"
-                        }
+                property bool initialized: false
+                onCurrentIndexChanged: {
+                    var userName = userModel.data(userModel.index(currentIndex, 0), Qt.UserRole + 1)
+                    usernameField.text = userName
+                    selectedUserIndex = currentIndex
+                    if (initialized) {
+                        passwordField.text = ""
+                        passwordField.forceActiveFocus()
                     }
                 }
+                Component.onCompleted: initialized = true
+            }
 
             Rectangle {
                 id: consoleDivider
-                y: password.y + password.height - consolePanel.y
+                anchors.top: consoleContent.bottom
+                anchors.topMargin: fieldPadding
                 anchors.left: parent.left
                 anchors.right: parent.right
                 height: 1
@@ -338,7 +324,7 @@ Rectangle {
                     spacing: 4
 
                     Text {
-                        text: "> initialisation complete"
+                        text: "> hello world"
                         color: '#929292'
                         font.pixelSize: 15
                     }
@@ -350,12 +336,6 @@ Rectangle {
                             color: "#ff5555"
                             font.pixelSize: 15
                         }
-                    }
-
-                    Text {
-                        text: "> hello world"
-                        color: '#929292'
-                        font.pixelSize: 15
                     }
 
                     Text {
@@ -418,45 +398,73 @@ Rectangle {
                 spacing: 10
 
             IconButton {
+                id: shutdownBtn
                 iconSource: "assets/lucide/power.svg"
                 label: "shutdown"
                 onClicked: powerOff()
+                KeyNavigation.tab: rebootBtn
+                KeyNavigation.backtab: userSelector
             }
 
             IconButton {
+                id: rebootBtn
                 iconSource: "assets/lucide/restart.svg"
                 label: "reboot"
                 onClicked: reboot()
+                KeyNavigation.tab: sleepBtn
+                KeyNavigation.backtab: shutdownBtn
             }
 
             IconButton {
+                id: sleepBtn
                 iconSource: "assets/lucide/sleep.svg"
                 label: "sleep"
                 onClicked: suspend()
+                KeyNavigation.tab: usernameField
+                KeyNavigation.backtab: rebootBtn
             }
 
             IconButton {
+                id: loginBtn
                 iconSource: "assets/lucide/paw-print.svg"
                 label: "login"
                 onClicked: login()
+                KeyNavigation.tab: sessionSelector
+                KeyNavigation.backtab: passwordField
             }
             }
         }
 
     }
 
+/* Functions go here */
+
+    Connections {
+            target: sddm
+            function onLoginSucceeded() {}
+            function onLoginFailed() {
+                showError(errorMessages[Math.floor(Math.random() * errorMessages.length)])
+                passwordField.text = ""
+            }
+        }
+
+    // Try to prefill session and user fields from last login data
     Component.onCompleted: {
+        var lastUserIdx = userModel.lastIndex
+        if (lastUserIdx >= 0 && lastUserIdx < userModel.count)
+            userSelector.currentIndex = lastUserIdx
+
+        var lastSessionIdx = sessionModel.lastIndex
+        if (lastSessionIdx >= 0 && lastSessionIdx < sessionModel.count)
+            sessionSelector.currentIndex = lastSessionIdx
+
         if (usernameField.text === "")
             usernameField.forceActiveFocus()
         else
             passwordField.forceActiveFocus()
     }
 
-
-/* Functions go here */
-
     function login() {
-        errorLog.clear()
         sddm.login(
             usernameField.text,
             passwordField.text,
@@ -495,26 +503,5 @@ Rectangle {
     // Unused
     function hibernate() {
         sddm.hibernate()
-    }
-
-    property var errorMessages: [
-        "segfault (core dumped)",
-        "error: auth returned nullptr",
-        "fatal: password mismatch at 0xDEADBEEF",
-        "panic: invalid credentials",
-        "403 forbidden",
-        "err: stack overflow in auth.c:42",
-        "SIGTERM: credential process killed",
-        "throw new Error('wrong password')",
-        "exit code 1: permission denied"
-    ]
-
-    Connections {
-        target: sddm
-        function onLoginSucceeded() {}
-        function onLoginFailed() {
-            showError(errorMessages[Math.floor(Math.random() * errorMessages.length)])
-            passwordField.text = ""
-        }
     }
 }
