@@ -37,7 +37,7 @@ No installation instructions at this time. This project is not packaged or ready
 
 ## Related Projects
 
-- [loafies](https://github.com/Lily123xoxo/loafies): A WIP Quickshell configuration I am still working on (currently private)
+- [loafies](https://github.com/Lily123xoxo/loafies): A WIP Quickshell configuration I am still working on. It is in very early days...
 
 ## Credits
 - Icons: [Lucide](https://lucide.dev)
